@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "C:\\Portable Programme\\arduino-1.8.5\\hardware\\arduino\\avr\\cores\\arduino"
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": false,
+                "path": [
+                    "C:\\Portable Programme\\arduino-1.8.5\\hardware\\arduino\\avr\\cores\\arduino"
+                ]
+            }
+        }
+    ]
+}
