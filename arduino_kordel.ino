@@ -5,7 +5,7 @@ const unsigned char STELLEN_FUER_TOGGLE_TIMES = 5;
 class outputCommand {
   private:
     //unsigned short int millisecondsSinceLastToggle = 0;
-    unsigned short int lastToggleTime;
+    unsigned long lastToggleTime;
     unsigned char pinNumber = LED_BUILTIN;
     boolean pinValue;
     unsigned char toggleTimeIndex;
@@ -50,9 +50,10 @@ class outputCommand {
       if (initialized) {
         //millisecondsSinceLastToggle += elapsedMilliseconds;
         //if (millisecondsSinceLastToggle >= toggleTimes[toggleTimeIndex]) {
-
         if ((millis() - lastToggleTime) >= toggleTimes[toggleTimeIndex]) {
-          if (toggleTimes[toggleTimeIndex] == 0) {
+          Serial.println(millis() - lastToggleTime);
+          if (toggleTimeIndex == toggleTimesSize) {
+            initialized = false;
             return false;
           }
           digitalWrite(pinNumber, pinValue);
@@ -116,7 +117,7 @@ void loop() {
             break;
           }
         }
-        //downloadingCommand.toString();
+        downloadingCommand.toString();
         break;
       default :
         //Serial.println("default");
