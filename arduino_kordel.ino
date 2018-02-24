@@ -2,7 +2,9 @@ const unsigned char MAX_TOGGLE_TIMES = 32;
 const unsigned char MAX_PARALLEL_COMMANDS = 16;
 const unsigned char STELLEN_FUER_TOGGLE_TIMES = 5;
 const unsigned char STELLEN_FUER_PIN_NUMMERN = 3;
-
+// #include "IRLibAll.h"
+#include <IRLibSendBase.h>
+#include <IRLib_HashRaw.h> 
 class outputCommand {
   private:
     unsigned long lastToggleTime;
@@ -37,11 +39,11 @@ class outputCommand {
         Serial.print(' ');
       }
       Serial.println();
-      Serial.print("Pin number: ");
+      Serial.print(F("Pin number: "));
       Serial.println(pinNumber);
-      Serial.print("Pin value: ");
-      if (pinValue) Serial.println("true");
-      else Serial.println("false");
+      Serial.print(F("Pin value: "));
+      if (pinValue) Serial.println(F("true"));
+      else Serial.println(F("false"));
     }
     void addToggleTime(unsigned short int downloadingToggleTime) {      
           toggleTimes[toggleTimesSize] = downloadingToggleTime;
@@ -67,7 +69,6 @@ class outputCommand {
   };
   
   outputCommand commands[MAX_PARALLEL_COMMANDS];
-  
   void setup() {
     //Serial.begin(230400); //E wird nicht mehr gesendet
     //Serial.begin(57600);
@@ -76,7 +77,8 @@ class outputCommand {
     for (unsigned char i = 2; i<=13;i++){
       pinMode(i, OUTPUT);      
     }
-    Serial.println("initialized");
+    sendRawIr(38);
+    Serial.println(F("initialized"));
   }
   
   unsigned short j;
@@ -116,21 +118,15 @@ class outputCommand {
     } 
     //Serial.println(micros() - before);
   } else if(Serial.available()) {
-    
     char newChar = Serial.read();
-    //byte newByte = newChar;
-    
     switch (newChar) {
       case 'H' :
-      //Serial.println('H');
       downloadingCommand = outputCommand(true);
         break;
         case 'L' :
-        //Serial.println('L');
         downloadingCommand = outputCommand(false);
         break;
         case 'E' :
-        //Serial.println('E');
         downloadingCommand.initialized = true;
         for (unsigned char k = 0; k < MAX_PARALLEL_COMMANDS; k++) {
           if (commands[k].empty){
@@ -139,20 +135,27 @@ class outputCommand {
           }
         }
         pinStringStelle = 0;
-        downloadingCommand.toString();
+        //downloadingCommand.toString();
         break;
       default :
-        //Serial.println("default");
         if(pinStringStelle < STELLEN_FUER_PIN_NUMMERN){
-          
           pinString[pinStringStelle] = newChar - 48;
           pinStringStelle++;
         }
-        else{
+        else {
           downloadingToggleTime[toggleTimeStelle] = newChar - 48;
           toggleTimeStelle++;          
         }
     }
-    //Serial.print("Looptime: ");
   }
+}
+
+
+
+IRsendRaw mySender;
+void sendRawIr(uint8_t frequency){
+  uint16_t irSignal[] = {8967, 4470, 552, 552, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 1683, 552, 39891, 8967, 2235, 552};
+  unsigned char size = sizeof(irSignal);
+  //mySender.send(irSignal,size, 38);
+  Serial.println(size);
 }
