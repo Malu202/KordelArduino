@@ -1,10 +1,42 @@
 const unsigned char MAX_TOGGLE_TIMES = 32;
 const unsigned char MAX_PARALLEL_COMMANDS = 16;
+const unsigned char MAX_IR_VALUES = 128;
+const unsigned char STELLEN_FUER_IR_TOGGLE_TIMES = 5;
 const unsigned char STELLEN_FUER_TOGGLE_TIMES = 5;
 const unsigned char STELLEN_FUER_PIN_NUMMERN = 3;
 // #include "IRLibAll.h"
 #include <IRLibSendBase.h>
 #include <IRLib_HashRaw.h> 
+
+class numberAssembler {
+private:
+  unsigned char index;
+  unsigned char chars[19]; //länge eines unsigned long long int für assemblierungsfaktor
+
+  long long int assemble(){
+    unsigned long long int assemblierungsfaktor = 1;
+    unsigned long long int output = 0;
+    for(unsigned char i = index; i>=0; i--){            
+      output += chars[i] * assemblierungsfaktor;
+      assemblierungsfaktor *= 10;
+    }
+    numberAssembler();
+    return output;
+  }
+public:
+  numberAssembler(){
+    index = 0;
+  }
+  void add(unsigned char newChar){
+    chars[index] = newChar;
+    index++;
+  }
+
+  unsigned char readUnsignedChar(){
+    return assemble();
+  }
+};
+
 class outputCommand {
   private:
     unsigned long lastToggleTime;
@@ -67,7 +99,42 @@ class outputCommand {
       return true;
     }
   };
+
+  class RawIrCommand {
+  private:
+    const unsigned short int DEFAULT_FREQUENCY = 38.000;
+    unsigned short int frequency = DEFAULT_FREQUENCY;    
+    IRsendRaw mySender;
+    // uint16_t irSignal[] = {8967, 4470, 552, 552, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 1683, 552, 39891, 8967, 2235, 552};
+    uint16_t irSignal[MAX_IR_VALUES];    
+    unsigned char arrayIndex = 0;
+    unsigned char byteIndex = 0;
+    
+    numberAssembler toggleTimeAssembler;
+    void addToggleTime(unsigned char value){
+      irSignal[arrayIndex] = value;
+      arrayIndex++;
+    }
   
+  public:
+    void add(char value){
+      if(byteIndex == STELLEN_FUER_IR_TOGGLE_TIMES - 1){
+        toggleTimeAssembler.add(value);
+      } else{
+        addToggleTime(toggleTimeAssembler.readUnsignedChar());
+      }
+    }
+    void setFrequency(unsigned short int hz){
+      frequency = hz;
+    }
+    void execute(){
+      mySender.send(irSignal, arrayIndex+1, 38);
+      arrayIndex = 0;
+      frequency = DEFAULT_FREQUENCY;
+    }
+  };
+
+  RawIrCommand rawIrCommand;
   outputCommand commands[MAX_PARALLEL_COMMANDS];
   void setup() {
     //Serial.begin(230400); //E wird nicht mehr gesendet
@@ -122,6 +189,7 @@ class outputCommand {
     switch (newChar) {
       case 'H' :
       downloadingCommand = outputCommand(true);
+      
         break;
         case 'L' :
         downloadingCommand = outputCommand(false);
@@ -152,7 +220,6 @@ class outputCommand {
 
 
 
-IRsendRaw mySender;
 void sendRawIr(uint8_t frequency){
   uint16_t irSignal[] = {8967, 4470, 552, 552, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 1683, 552, 39891, 8967, 2235, 552};
   unsigned char size = sizeof(irSignal);
