@@ -37,6 +37,17 @@ public:
   }
 };
 
+class PinNumberAssembler{
+private:
+  numberAssembler numberAssembler;
+
+public:
+  unsigned long long int readPinNumber(){
+    return number
+  }
+
+}
+
 class outputCommand {
   private:
     unsigned long lastToggleTime;
@@ -218,6 +229,43 @@ class outputCommand {
   }
 }
 
+
+char mode = '';
+void loop(){
+  for (j = 0; j < MAX_PARALLEL_COMMANDS; j++) {
+    if (commands[j].empty) {
+      break;
+    } else {
+      commands[j].update();
+    }
+  }
+
+
+  if(Serial.available()) {
+    char newChar = Serial.read();
+    switch (mode) {
+      case 'H' :      
+        break;
+      case 'L' :
+        break;
+      default:
+        mode = newChar;
+    
+    if(newChar == 'E'){
+      mode = '';
+    }
+
+}
+
+outputCommand downloadingCommand;
+unsigned char pinNumberIndex;
+PinNumberAssembler
+void downloadDigitalOutputCommand(newChar){
+  if(pinNumberIndex == STELLEN_FUER_PIN_NUMMERN){
+    downloadingCommand.pinNumber = PinNumberAssembler.readPinNumber();
+  } else{
+  }
+}
 
 
 void sendRawIr(uint8_t frequency){
