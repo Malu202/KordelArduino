@@ -230,6 +230,34 @@ class outputCommand {
 }
 
 
+char mode = '';
+void loop(){
+  for (j = 0; j < MAX_PARALLEL_COMMANDS; j++) {
+    if (commands[j].empty) {
+      break;
+    } else {
+      commands[j].update();
+    }
+  }
+
+
+  if(Serial.available()) {
+    char newChar = Serial.read();
+    switch (mode) {
+      case 'H' :      
+        break;
+      case 'L' :
+        break;
+      default:
+        mode = newChar;
+    
+    if(newChar == 'E'){
+      mode = '';
+    }
+
+}
+//hi?
+
 outputCommand downloadingCommand;
 unsigned char pinNumberIndex;
 PinNumberAssembler
