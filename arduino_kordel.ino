@@ -257,6 +257,7 @@ void loop(){
     }
 
 }
+//branchi?
 
 outputCommand downloadingCommand;
 unsigned char pinNumberIndex;
