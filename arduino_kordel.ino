@@ -12,47 +12,43 @@ const unsigned char STELLEN_FUER_PIN_NUMMERN = 3;
 class NumberAssembler {
 private:
   unsigned char index;
-  unsigned char chars[19]; //länge eines unsigned long long int für assemblierungsfaktor
+  unsigned char chars[19]; //19 Stellen = länge eines unsigned long long int für assemblierungsfaktor
   unsigned char size;
   long long int assemble(){
     unsigned long long int assemblierungsfaktor = 1u;
     unsigned long long int output = 0u;
-    Serial.println("hoi");
-    for(unsigned char i = index; i>=0; i--){            
-      Serial.println(i);
-      //Serial.println(assemblierungsfaktor);
-      Serial.write(chars[i]);
-      Serial.println();
+    for(unsigned char i = index-1; i>=0; i--){
       output += chars[i] * assemblierungsfaktor;
       assemblierungsfaktor *= 10;
       if(i==0)break;
     }
-    NumberAssembler();
+    reset();
     return output;
   }
+  void reset(){
+    index = 0;
+  }
 public:
+
   NumberAssembler(){
     index = 0;
-    size = 0;
   }
   NumberAssembler(unsigned char sizee){
     index = 0;
     size = sizee;
   }
   void add(unsigned char newChar){
-    Serial.write(newChar);
-    Serial.println();
-    chars[index] = newChar;
+    chars[index] = newChar-48;
     index++;
   }
   
   unsigned char readUnsignedChar(){
     return assemble();
   }
+  unsigned short int readUnsignedShortInt(){
+    return assemble();
+  }
   boolean isDone(){
-    Serial.print(index);
-    Serial.print('/');
-    Serial.println(size);
     if(index == size){
       return true;
     } else{
@@ -69,17 +65,13 @@ private:
 public:
   unsigned char readPinNumber(){
     ignoringState = true;
-    unsigned char pinNumberIndex = 0;
+    pinNumberIndex = 0;
     return numberAssembler.readUnsignedChar();
   }
   unsigned char add(unsigned char newChar){
-    Serial.write(newChar);
-//    Serial.println();
     if(!ignoringState){
-      Serial.println(" saved");
       numberAssembler.add(newChar);
     } else {
-      Serial.println(" ignored");
       if(newChar == 'D'){
         ignoringState = false;
       }
@@ -87,7 +79,6 @@ public:
     pinNumberIndex++;
   }
   boolean isDone(){
-    
     if(pinNumberIndex == STELLEN_FUER_PIN_NUMMERN){
       return true;
     }
@@ -95,7 +86,6 @@ public:
       return false;
     }
   }
-
 };
 
 class outputCommand {
@@ -107,17 +97,19 @@ class outputCommand {
     unsigned char toggleTimesSize;
     
   public:
-    boolean empty = true;
-    boolean initialized = false;
+    boolean running = false;
     unsigned char pinNumber = LED_BUILTIN;
     outputCommand() {
     }
     outputCommand(boolean initialValue) {
-      empty = false;
+      running = true;
       toggleTimeIndex = 0;
       unsigned short int zero = 0;
-      for (unsigned char toggleTimeStelle = 1; toggleTimeStelle < STELLEN_FUER_TOGGLE_TIMES; toggleTimeStelle++) {
-        toggleTimes[toggleTimeStelle] = zero;
+      // for (unsigned char toggleTimeStelle = 1; toggleTimeStelle < STELLEN_FUER_TOGGLE_TIMES; toggleTimeStelle++) {
+      //   toggleTimes[toggleTimeStelle] = zero;
+      // }
+      for(unsigned char i = 0; i<MAX_TOGGLE_TIMES; i++){
+        toggleTimes[i] = zero;
       }
       lastToggleTime = millis();
       pinValue = initialValue;
@@ -142,11 +134,11 @@ class outputCommand {
           toggleTimesSize++;      
     }
     boolean update() {
-      if (initialized) {
+      if (running) {
         if ((millis() - lastToggleTime) >= toggleTimes[toggleTimeIndex]) {
           //Serial.println(millis() - lastToggleTime);
           if (toggleTimeIndex == toggleTimesSize) {
-            initialized = false;
+            running = false;
             return false;
           }
           if(pinValue) digitalWrite(pinNumber, HIGH);
@@ -160,7 +152,7 @@ class outputCommand {
     }
   };
 
-  class RawIrCommand {
+class RawIrCommand {
   private:
     const unsigned short int DEFAULT_FREQUENCY = 38.000;
     unsigned short int frequency = DEFAULT_FREQUENCY;    
@@ -181,7 +173,7 @@ class outputCommand {
       if(byteIndex == STELLEN_FUER_IR_TOGGLE_TIMES - 1){
         toggleTimeAssembler.add(value);
       } else{
-        addToggleTime(toggleTimeAssembler.readUnsignedChar());
+        addToggleTime(toggleTimeAssembler.readUnsignedShortInt());
       }
     }
     void setFrequency(unsigned short int hz){
@@ -192,31 +184,26 @@ class outputCommand {
       arrayIndex = 0;
       frequency = DEFAULT_FREQUENCY;
     }
-  };
+};
 
   //RawIrCommand rawIrCommand;
-  outputCommand commands[MAX_PARALLEL_COMMANDS];
-  void setup() {
-    //Serial.begin(230400); //E wird nicht mehr gesendet
-    //Serial.begin(57600);
-    Serial.begin(9600);
-    pinMode(LED_BUILTIN, OUTPUT);
-    for (unsigned char i = 2; i<=13;i++){
-      pinMode(i, OUTPUT);      
-    }
-    //sendRawIr(38);
-    Serial.println(F("initialized"));
+outputCommand commands[MAX_PARALLEL_COMMANDS];
+ void setup() {
+  Serial.begin(9600);
+   pinMode(LED_BUILTIN, OUTPUT);
+   for (unsigned char i = 2; i<=13;i++){
+    pinMode(i, OUTPUT);      
   }
+   Serial.println(F("initialized"));
+ }
   
   
-  unsigned short parrallelCommandIndex;
-  char mode = ' ';
-  outputCommand downloadingCommand;
+unsigned short parrallelCommandIndex;
+char mode = ' ';
+outputCommand downloadingCommand;
 void loop(){
   for (parrallelCommandIndex = 0; parrallelCommandIndex < MAX_PARALLEL_COMMANDS; parrallelCommandIndex++) {
-    if (commands[parrallelCommandIndex].empty) {
-      break; //not sure
-    } else {
+    if (!commands[parrallelCommandIndex].running) {    
       commands[parrallelCommandIndex].update();
     }
   }
@@ -233,9 +220,6 @@ void loop(){
         mode = newChar;   
         //initialization
         switch(newChar){
-          case 'E':
-          mode == ' ';
-          break;
           case 'H':
           downloadingCommand = outputCommand(true);
           break;          
@@ -244,33 +228,35 @@ void loop(){
           break;
         }
       }
+      
+      if (newChar == 'E'){
+        mode = ' ';
+      }
     }
-  }
+}
 //unsigned char pinNumberIndex;
 PinNumberAssembler pinNumberAssembler;
 NumberAssembler toggleTimeAssembler = NumberAssembler(STELLEN_FUER_TOGGLE_TIMES);
 void downloadDigitalOutputCommand(unsigned char newChar){
-  if(pinNumberAssembler.isDone()){    
-    Serial.println("pinNumberAssembler is done");
+  if(newChar == 'E'){
+    downloadingCommand.pinNumber = pinNumberAssembler.readPinNumber();
+    downloadingCommand.running = true;
+    for (unsigned char k = 0; k < MAX_PARALLEL_COMMANDS; k++) {
+      if (!commands[k].running){
+        commands[k] = downloadingCommand;
+        break;
+      }
+    }
+    downloadingCommand.toString();
+  } else if(pinNumberAssembler.isDone()){    
     toggleTimeAssembler.add(newChar);
     if(toggleTimeAssembler.isDone()){
-      downloadingCommand.addToggleTime(toggleTimeAssembler.readUnsignedChar());
+      downloadingCommand.addToggleTime(toggleTimeAssembler.readUnsignedShortInt());
     }
   }
-else if(newChar == 'E'){
-  Serial.println("newChar == E");
-  downloadingCommand.pinNumber = pinNumberAssembler.readPinNumber();
-  downloadingCommand.initialized = true;
-  for (unsigned char k = 0; k < MAX_PARALLEL_COMMANDS; k++) {
-    if (commands[k].empty){
-      commands[k] = downloadingCommand;
-      break;
-    }
-  }
-  downloadingCommand.toString();
-} else {
+ else {
   pinNumberAssembler.add(newChar);
-}
+ }
 }
 
 /*
