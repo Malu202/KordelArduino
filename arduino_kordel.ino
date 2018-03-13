@@ -22,14 +22,11 @@ private:
       assemblierungsfaktor *= 10;
       if(i==0)break;
     }
-    reset();
+    index = 0;
     return output;
   }
-  void reset(){
-    index = 0;
-  }
+  
 public:
-
   NumberAssembler(){
     index = 0;
   }
@@ -203,9 +200,9 @@ char mode = ' ';
 outputCommand downloadingCommand;
 void loop(){
   for (parrallelCommandIndex = 0; parrallelCommandIndex < MAX_PARALLEL_COMMANDS; parrallelCommandIndex++) {
-    if (!commands[parrallelCommandIndex].running) {    
+    //if (commands[parrallelCommandIndex].running) {    
       commands[parrallelCommandIndex].update();
-    }
+    //}
   }
   
   
@@ -247,7 +244,7 @@ void downloadDigitalOutputCommand(unsigned char newChar){
         break;
       }
     }
-    downloadingCommand.toString();
+    //downloadingCommand.toString();
   } else if(pinNumberAssembler.isDone()){    
     toggleTimeAssembler.add(newChar);
     if(toggleTimeAssembler.isDone()){
