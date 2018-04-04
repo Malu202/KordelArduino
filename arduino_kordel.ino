@@ -3,6 +3,7 @@ const unsigned char MAX_TOGGLE_TIMES = 32;
 const unsigned char MAX_PARALLEL_COMMANDS = 2;
 const unsigned char MAX_IR_VALUES = 128;
 const unsigned char STELLEN_FUER_IR_TOGGLE_TIMES = 5;
+const unsigned char STELLEN_FUER_RAW_IR_FREQUENZ = 5;
 const unsigned char STELLEN_FUER_TOGGLE_TIMES = 5;
 const unsigned char STELLEN_FUER_PIN_NUMMERN = 3;
 // #include "IRLibAll.h"
@@ -164,7 +165,8 @@ class RawIrCommand {
     uint16_t irSignal[MAX_IR_VALUES];    
     unsigned char arrayIndex = 0;
     unsigned char byteIndex = 0;
-    
+    boolean frequencySet = true;
+    NumberAssembler frequencyAssembler = NumberAssembler(STELLEN_FUER_RAW_IR_FREQUENZ);
     NumberAssembler toggleTimeAssembler = NumberAssembler(STELLEN_FUER_IR_TOGGLE_TIMES);
     void addToggleTime(unsigned short int value){
       irSignal[arrayIndex] = value;
@@ -175,26 +177,25 @@ class RawIrCommand {
     unsigned char log = 0;
     unsigned char log2 = 0;
     void add(char value){
-      /*
-      if(byteIndex == STELLEN_FUER_IR_TOGGLE_TIMES - 1){
-        toggleTimeAssembler.add(value);
-      } else{
-        addToggleTime(toggleTimeAssembler.readUnsignedShortInt());
+     if(frequencySet){
+      toggleTimeAssembler.add(value);
+        if(toggleTimeAssembler.isDone()){
+          unsigned short int newToggleTime = toggleTimeAssembler.readUnsignedShortInt();     
+          addToggleTime(newToggleTime);
+        }     
+    } else{
+       frequencyAssembler.add(value);
+       if(frequencyAssembler.isDone()){
+          frequency = frequencyAssembler.readUnsignedShortInt();
+         frequencySet = true;
+       }
       }
-      */
-     toggleTimeAssembler.add(value);
-     if(toggleTimeAssembler.isDone()){
-       unsigned short int newToggleTime = toggleTimeAssembler.readUnsignedShortInt();     
-       addToggleTime(newToggleTime);
-     }
     }
-    void setFrequency(unsigned short int hz){
-      frequency = hz;
-    }
+
     void execute(){
       mySender.send(irSignal, arrayIndex+1, 38);
       arrayIndex = 0;
-      frequency = DEFAULT_FREQUENCY;
+      frequencySet = false;
       // Serial.println("Executed");
       // for (unsigned char i = 0; i < MAX_IR_VALUES; i++) {
       //   // Serial.print(irSignal[i]);
