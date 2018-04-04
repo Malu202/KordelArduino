@@ -10,7 +10,11 @@
                 "path": [
                     "C:\\Portable Programme\\arduino-1.8.5\\hardware\\arduino\\avr\\cores\\arduino"
                 ]
-            }
+            },
+            "intelliSenseMode": "msvc-x64",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
         }
-    ]
+    ],
+    "version": 3
 }

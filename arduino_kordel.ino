@@ -17,7 +17,14 @@ private:
   long long int assemble(){
     unsigned long long int assemblierungsfaktor = 1u;
     unsigned long long int output = 0u;
+    unsigned int asslog = 1;
     for(unsigned char i = index-1; i>=0; i--){
+      // if(log){
+      // Serial.print(asslog);
+      // asslog *= 10;
+      // Serial.print(" x ");
+      // Serial.println(chars[i]);
+      // }
       output += chars[i] * assemblierungsfaktor;
       assemblierungsfaktor *= 10;
       if(i==0)break;
@@ -30,9 +37,9 @@ public:
   NumberAssembler(){
     index = 0;
   }
-  NumberAssembler(unsigned char sizee){
+  NumberAssembler(unsigned char mysize){
     index = 0;
-    size = sizee;
+    size = mysize;
   }
   void add(unsigned char newChar){
     chars[index] = newChar-48;
@@ -102,9 +109,6 @@ class outputCommand {
       running = true;
       toggleTimeIndex = 0;
       unsigned short int zero = 0;
-      // for (unsigned char toggleTimeStelle = 1; toggleTimeStelle < STELLEN_FUER_TOGGLE_TIMES; toggleTimeStelle++) {
-      //   toggleTimes[toggleTimeStelle] = zero;
-      // }
       for(unsigned char i = 0; i<MAX_TOGGLE_TIMES; i++){
         toggleTimes[i] = zero;
       }
@@ -114,6 +118,7 @@ class outputCommand {
       toggleTimes[0] = 0;
       toggleTimesSize = 1;
     }
+    /*
     void toString() {
       for (unsigned char toggleTimeStelle = 0; toggleTimeStelle < MAX_TOGGLE_TIMES; toggleTimeStelle++) {
         Serial.print(toggleTimes[toggleTimeStelle]);
@@ -126,6 +131,7 @@ class outputCommand {
       if (pinValue) Serial.println(F("true"));
       else Serial.println(F("false"));
     }
+    */
     void addToggleTime(unsigned short int downloadingToggleTime) {      
           toggleTimes[toggleTimesSize] = downloadingToggleTime;
           toggleTimesSize++;      
@@ -154,24 +160,33 @@ class RawIrCommand {
     const unsigned short int DEFAULT_FREQUENCY = 38.000;
     unsigned short int frequency = DEFAULT_FREQUENCY;    
     IRsendRaw mySender;
-    // uint16_t irSignal[] = {8967, 4470, 552, 552, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 1683, 552, 39891, 8967, 2235, 552};
+    uint16_t irSignalOriginal[72] = {8967, 4470, 552, 552, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 1683, 552, 39891, 8967, 2235, 552};
     uint16_t irSignal[MAX_IR_VALUES];    
     unsigned char arrayIndex = 0;
     unsigned char byteIndex = 0;
     
-    NumberAssembler toggleTimeAssembler;
-    void addToggleTime(unsigned char value){
+    NumberAssembler toggleTimeAssembler = NumberAssembler(STELLEN_FUER_IR_TOGGLE_TIMES);
+    void addToggleTime(unsigned short int value){
       irSignal[arrayIndex] = value;
       arrayIndex++;
     }
   
   public:
+    unsigned char log = 0;
+    unsigned char log2 = 0;
     void add(char value){
+      /*
       if(byteIndex == STELLEN_FUER_IR_TOGGLE_TIMES - 1){
         toggleTimeAssembler.add(value);
       } else{
         addToggleTime(toggleTimeAssembler.readUnsignedShortInt());
       }
+      */
+     toggleTimeAssembler.add(value);
+     if(toggleTimeAssembler.isDone()){
+       unsigned short int newToggleTime = toggleTimeAssembler.readUnsignedShortInt();     
+       addToggleTime(newToggleTime);
+     }
     }
     void setFrequency(unsigned short int hz){
       frequency = hz;
@@ -180,6 +195,27 @@ class RawIrCommand {
       mySender.send(irSignal, arrayIndex+1, 38);
       arrayIndex = 0;
       frequency = DEFAULT_FREQUENCY;
+      // Serial.println("Executed");
+      // for (unsigned char i = 0; i < MAX_IR_VALUES; i++) {
+      //   // Serial.print(irSignal[i]);
+      //   // Serial.print((' '));
+      //     // Serial.print(irSignal[i]);
+      //     // Serial.print(" ");
+
+      //   if(irSignal[i] != irSignalOriginal[i]){
+      //     Serial.print("Mismatch on number ");
+      //     Serial.print(i);
+      //     Serial.print(": '");
+      //     Serial.print(irSignal[i]);
+      //     Serial.print("' should be '");
+      //     Serial.print(irSignalOriginal[i]);
+      //     Serial.println("'");
+      //   }
+      // }
+    
+      for (unsigned char i = 0; i<MAX_IR_VALUES; i++){
+        irSignal[i] = 0;
+      }
     }
 };
 
@@ -197,7 +233,8 @@ outputCommand commands[MAX_PARALLEL_COMMANDS];
   
 unsigned short parrallelCommandIndex;
 char mode = ' ';
-outputCommand downloadingCommand;
+outputCommand downloadingDigitalCommand;
+RawIrCommand downloadingRawIrCommand;
 void loop(){
   for (parrallelCommandIndex = 0; parrallelCommandIndex < MAX_PARALLEL_COMMANDS; parrallelCommandIndex++) {
     //if (commands[parrallelCommandIndex].running) {    
@@ -209,6 +246,9 @@ void loop(){
   if(Serial.available()) {
     char newChar = Serial.read();
     switch (mode) {
+      case 'R':
+        downloadRawIrCommand(newChar);
+        break;
       case 'H':
       case 'L':
         downloadDigitalOutputCommand(newChar);
@@ -218,10 +258,10 @@ void loop(){
         //initialization
         switch(newChar){
           case 'H':
-          downloadingCommand = outputCommand(true);
+          downloadingDigitalCommand = outputCommand(true);
           break;          
           case 'L':
-          downloadingCommand = outputCommand(false);
+          downloadingDigitalCommand = outputCommand(false);
           break;
         }
       }
@@ -236,19 +276,19 @@ PinNumberAssembler pinNumberAssembler;
 NumberAssembler toggleTimeAssembler = NumberAssembler(STELLEN_FUER_TOGGLE_TIMES);
 void downloadDigitalOutputCommand(unsigned char newChar){
   if(newChar == 'E'){
-    downloadingCommand.pinNumber = pinNumberAssembler.readPinNumber();
-    downloadingCommand.running = true;
+    downloadingDigitalCommand.pinNumber = pinNumberAssembler.readPinNumber();
+    downloadingDigitalCommand.running = true;
     for (unsigned char k = 0; k < MAX_PARALLEL_COMMANDS; k++) {
       if (!commands[k].running){
-        commands[k] = downloadingCommand;
+        commands[k] = downloadingDigitalCommand;
         break;
       }
     }
-    //downloadingCommand.toString();
+    //downloadingDigitalCommand.toString();
   } else if(pinNumberAssembler.isDone()){    
     toggleTimeAssembler.add(newChar);
     if(toggleTimeAssembler.isDone()){
-      downloadingCommand.addToggleTime(toggleTimeAssembler.readUnsignedShortInt());
+      downloadingDigitalCommand.addToggleTime(toggleTimeAssembler.readUnsignedShortInt());
     }
   }
  else {
@@ -256,6 +296,15 @@ void downloadDigitalOutputCommand(unsigned char newChar){
  }
 }
 
+
+void downloadRawIrCommand(unsigned char newChar){
+  if(newChar == 'E'){
+    downloadingRawIrCommand.execute();
+  }
+  else{
+    downloadingRawIrCommand.add(newChar);
+  }
+}
 /*
 void sendRawIr(uint8_t frequency){
   uint16_t irSignal[] = {8967, 4470, 552, 552, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 552, 552, 1683, 552, 1683, 552, 39891, 8967, 2235, 552};
