@@ -240,7 +240,7 @@ public:
   {
     mySender.send(irSignal, arrayIndex + 1, 38);
     arrayIndex = 0;
-    frequencySet = false;
+    //frequencySet = false;
     // Serial.println("Executed");
     // for (unsigned char i = 0; i < MAX_IR_VALUES; i++) {
     //   // Serial.print(irSignal[i]);
